@@ -1,0 +1,18 @@
+== Short term ==
+Search options (simplified,traditional,fulltext,dictionary sources)
+Searchbox context hints
+Stroke order animation
+
+== Mid term ==
+Recognition of traditional characters
+Try tomoe recognition engine
+Vocabulary database
+Anki integration
+Text processor (annotations, etc.)
+
+== Long term ==
+Reading tools (CZ <-> pinyin)
+Settings
+Czech locale
+Instalator (deb balik, widle)
+Android?
