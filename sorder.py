@@ -4,13 +4,13 @@
 import re
 import sqlalchemy
 import gtk
-import gobject
 import cairo
 import time
+import threading
 
 STROKE_DB = 'sqlite:///data/stroke.db'
 CANVAS_SIZE = (300, 300)
-ANIMATION_SPEED = 8 # pause between iterations in miliseconds
+ANIMATION_SPEED = 0.005 # pause between iterations in seconds
 PAUSE_BETWEEN_STROKES = 0.5 # pause between strokes in seconds
 
 class Stroke:
@@ -55,16 +55,10 @@ class Stroke:
 class StrokeOrderAnimation:
     """Stroke order animation launcher"""
 
-    def __init__(self, builder, char):
+    def __init__(self, char):
         """Init instance attributes"""
         self.char = char
-        self.builder = builder
 
-        # Setup window
-        self.window = self.builder.get_object("StrokeOrderWindow")
-
-    def start(self):
-        """Find the character in the database, parse it and show the window"""
         # load data
         db = sqlalchemy.create_engine(STROKE_DB)
         tb = sqlalchemy.Table('strokeorder', sqlalchemy.MetaData(db), 
@@ -72,12 +66,41 @@ class StrokeOrderAnimation:
         r = tb.select(tb.c.chr == self.char).execute().fetchone()
         self._parse_chr(r.data)
 
+        # Setup window
+        self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.window.connect("destroy", lambda w: self.stop())
+        self.window.set_border_width(10)
+        self.window.set_title("Stroke order of " + self.char)
+
         # Add my StrokeOrderWidget
         self.sow = StrokeOrderWidget(self.strokes)
         self.window.add(self.sow)
 
-        # start up
+        # show window content
         self.window.show_all()
+
+        # Setup the animation thread
+        self.stop_event = threading.Event()
+        self.anim_thread = threading.Thread(target=self._animate,
+                                            args=(self.stop_event,))
+
+    def start(self):
+        """Start the animation"""
+        self.anim_thread.start() 
+
+    def stop(self):
+        """Stop the animation"""
+        self.stop_event.set()
+
+    def _animate(self, stop_event):
+        """Timer callback for animation iteration. Animation will continue
+           until False is returned here"""
+        while not stop_event.is_set():
+            if self.sow.is_pause():
+                stop_event.wait(PAUSE_BETWEEN_STROKES)
+            stop_event.wait(ANIMATION_SPEED)
+            # Ask gtk to redraw the widget
+            self.sow.queue_draw()
 
     def _parse_chr(self, string):
         """Parse the stroke data of the entire character"""
@@ -135,23 +158,20 @@ class StrokeOrderWidget(gtk.DrawingArea):
         self.strokes = strokes
         self.curstroke = 0
         self.curpos = 0
-        self.animated = False
+        self.pause = True
+
+    def is_pause(self):
+        """Return and clear the pause flag"""
+        ret = self.pause
+        self.pause = False
+        return ret
 
     def _expose(self, widget, event):
         """Draw the next state iteration when GTK asks for redrawing"""
         self.cr = widget.window.cairo_create()
-        if not self.animated:
-            gobject.timeout_add(ANIMATION_SPEED, self._animate)
-            self.animated = True
         self._draw_template()
         self._next_iteration()
         return False
-
-    def _animate(self):
-        """Timer callback for animation iteration. Animation will continue
-           until False is returned here"""
-        self.queue_draw() # Ask gtk to redraw the widget
-        return True
 
     def _draw_stroke(self, stroke, template = False):
         """Draw a single stroke using appropriate color"""
@@ -221,7 +241,7 @@ class StrokeOrderWidget(gtk.DrawingArea):
         # If limit was reached, move to the next stroke
         if condition >= limit:
             if self.strokes[self.curstroke].pause:
-                time.sleep(PAUSE_BETWEEN_STROKES)
+                self.pause = True
             self.strokes[self.curstroke].drawn = True
             self.curstroke += 1
             self.curpos = 0
@@ -231,12 +251,10 @@ class StrokeOrderWidget(gtk.DrawingArea):
 
 # If directly called, start the GUI
 if __name__ == "__main__":
-    # Fire up GtkBuilder
-    gladefile = "tajpan.glade"
-    builder = gtk.Builder()
-    builder.add_from_file(gladefile)
-
-    gui = StrokeOrderAnimation(builder, unicode('我'))
+    gui = StrokeOrderAnimation(unicode('我'))
     gui.window.connect("destroy", gtk.main_quit)
     gui.start()
+    gtk.gdk.threads_init()
+    gtk.gdk.threads_enter()
     gtk.main()
+    gtk.gdk.threads_leave()
