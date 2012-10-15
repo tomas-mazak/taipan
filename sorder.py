@@ -59,38 +59,50 @@ class StrokeOrderAnimation:
         """Init instance attributes"""
         self.char = char
 
-        # load data
-        db = sqlalchemy.create_engine(STROKE_DB)
-        tb = sqlalchemy.Table('strokeorder', sqlalchemy.MetaData(db), 
-                              autoload=True)
-        r = tb.select(tb.c.chr == self.char).execute().fetchone()
-        self._parse_chr(r.data)
-
         # Setup window
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.connect("destroy", lambda w: self.stop())
         self.window.set_border_width(10)
         self.window.set_title("Stroke order of " + self.char)
 
-        # Add my StrokeOrderWidget
-        self.sow = StrokeOrderWidget(self.strokes)
-        self.window.add(self.sow)
+        # load data
+        db = sqlalchemy.create_engine(STROKE_DB)
+        tb = sqlalchemy.Table('strokeorder', sqlalchemy.MetaData(db), 
+                              autoload=True)
+        r = tb.select(tb.c.chr == self.char).execute().fetchone()
+
+        # Display error message, if stroke data for the given character was
+        # not found
+        if r == None:
+            self.notfound = True
+            self.label = gtk.Label("Stroke data for character " + char 
+                                   + " not found.")
+            self.window.add(self.label)
+        else:
+            self.notfound = False
+            self._parse_chr(r.data)
+
+            # Add my StrokeOrderWidget
+            self.sow = StrokeOrderWidget(self.strokes)
+            self.window.add(self.sow)
+
+            # Setup the animation thread
+            self.stop_event = threading.Event()
+            self.anim_thread = threading.Thread(target=self._animate,
+                                                args=(self.stop_event,))
 
         # show window content
         self.window.show_all()
 
-        # Setup the animation thread
-        self.stop_event = threading.Event()
-        self.anim_thread = threading.Thread(target=self._animate,
-                                            args=(self.stop_event,))
-
     def start(self):
         """Start the animation"""
-        self.anim_thread.start() 
+        if not self.notfound:
+            self.anim_thread.start() 
 
     def stop(self):
         """Stop the animation"""
-        self.stop_event.set()
+        if not self.notfound:
+            self.stop_event.set()
 
     def _animate(self, stop_event):
         """Timer callback for animation iteration. Animation will continue
@@ -131,6 +143,28 @@ class StrokeOrderAnimation:
         stroke.xmax = max(stroke.points, key=lambda x: x[0])[0]
         stroke.ymin = min(stroke.points, key=lambda x: x[1])[1]
         stroke.ymax = max(stroke.points, key=lambda x: x[1])[1]
+
+        # Change diagonal strokes to best-fitting orthogonal ones
+        if stroke.direction == Stroke.DOWN_RIGHT:
+            if stroke.xmax-stroke.xmin > stroke.ymax-stroke.ymin:
+                stroke.direction = Stroke.LEFT_TO_RIGHT
+            else:
+                stroke.direction = Stroke.DOWN
+        elif stroke.direction == Stroke.DOWN_LEFT:
+            if stroke.xmax-stroke.xmin > stroke.ymax-stroke.ymin:
+                stroke.direction = Stroke.RIGHT_TO_LEFT
+            else:
+                stroke.direction = Stroke.DOWN
+        elif stroke.direction == Stroke.UP_RIGHT:
+            if stroke.xmax-stroke.xmin > stroke.ymax-stroke.ymin:
+                stroke.direction = Stroke.LEFT_TO_RIGHT
+            else:
+                stroke.direction = Stroke.UP
+        elif stroke.direction == Stroke.UP_LEFT:
+            if stroke.xmax-stroke.xmin > stroke.ymax-stroke.ymin:
+                stroke.direction = Stroke.RIGHT_TO_LEFT
+            else:
+                stroke.direction = Stroke.UP
         
         # Add to the list
         self.strokes.append(stroke)
@@ -216,8 +250,7 @@ class StrokeOrderWidget(gtk.DrawingArea):
             x, y, w, h = 0, 0, stroke.xmin + self.curpos, CANVAS_SIZE[1]
             condition = stroke.xmin + self.curpos
             limit = stroke.xmax
-        elif stroke.direction in (Stroke.DOWN_RIGHT, Stroke.DOWN,
-                                  Stroke.DOWN_LEFT):
+        elif stroke.direction == Stroke.DOWN:
             x, y, w, h = 0, 0, CANVAS_SIZE[1], stroke.ymin + self.curpos
             condition = stroke.ymin + self.curpos
             limit = stroke.ymax
@@ -226,7 +259,7 @@ class StrokeOrderWidget(gtk.DrawingArea):
             w, h = CANVAS_SIZE[0], CANVAS_SIZE[1]
             condition = stroke.xmin
             limit = stroke.xmax - self.curpos
-        elif stroke.direction in (Stroke.UP_LEFT, Stroke.UP, Stroke.UP_RIGHT):
+        elif stroke.direction == Stroke.UP:
             x, y = 0, stroke.ymax - self.curpos
             w, h = CANVAS_SIZE[0], CANVAS_SIZE[1]
             condition = stroke.ymin
@@ -251,7 +284,10 @@ class StrokeOrderWidget(gtk.DrawingArea):
 
 # If directly called, start the GUI
 if __name__ == "__main__":
+    # character we know
     gui = StrokeOrderAnimation(unicode('我'))
+    # character we don't know
+    #gui = StrokeOrderAnimation(unicode('桩'))
     gui.window.connect("destroy", gtk.main_quit)
     gui.start()
     gtk.gdk.threads_init()
