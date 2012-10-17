@@ -1,7 +1,7 @@
 == Short term ==
-Search options (simplified,traditional,fulltext,dictionary sources)
-Searchbox context hints
-Stroke order animation
+Search options:
+  * !! fix pinyin problem -- when searching 'ma', 'fu',  error is raised, few records found
+Widgetize dictionary, clean the source
 
 == Mid term ==
 Recognition of traditional characters
@@ -16,3 +16,4 @@ Settings
 Czech locale
 Instalator (deb balik, widle)
 Android?
+Multiple dictionaries?
