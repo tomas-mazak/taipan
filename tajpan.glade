@@ -2,12 +2,12 @@
 <interface>
   <requires lib="gtk+" version="2.24"/>
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkWindow" id="MainWindow">
+  <object class="GtkWindow" id="DictionaryWidget">
     <property name="can_focus">False</property>
     <property name="default_width">300</property>
     <property name="default_height">600</property>
     <child>
-      <object class="GtkVBox" id="vbox1">
+      <object class="GtkVBox" id="DictionaryWidgetLayout">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <child>
@@ -165,9 +165,5 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkEntryCompletion" id="com_search">
-    <property name="text_column">0</property>
-    <property name="popup_set_width">False</property>
   </object>
 </interface>

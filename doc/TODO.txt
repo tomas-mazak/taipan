@@ -1,14 +1,11 @@
 == Short term ==
-Search options:
-  * !! fix pinyin problem -- when searching 'ma', 'fu',  error is raised, few records found
-Widgetize dictionary, clean the source
-
-== Mid term ==
+Vocabulary database
+Text processor (annotations, etc.)
 Recognition of traditional characters
 Try tomoe recognition engine
-Vocabulary database
 Anki integration
-Text processor (annotations, etc.)
+Clean the source:
+  * move tags outside the dict module (separate 'style' module?)
 
 == Long term ==
 Reading tools (CZ <-> pinyin)
