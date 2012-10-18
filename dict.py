@@ -10,7 +10,7 @@ import cjklib.characterlookup
 import sorder
 
 CJKLIB_OPTS = {'databaseUrl': 'sqlite:///data/cjklib.db'}
-GLADE_FILE = "tajpan.glade"
+GLADE_FILE = "taipan.glade"
 
 class Tag:
     """Container of formatting tags"""
