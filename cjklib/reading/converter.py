@@ -662,9 +662,11 @@ class PinyinDialectConverter(ReadingConverter):
 
                 # check if target operator supports missing tones
                 if tone not in targetTones:
+                    # wighack
                     # missing tone not supported, raise a conversion error
-                    raise AmbiguousConversionError("Target reading does not " \
-                        "support missing tone information")
+                    #raise AmbiguousConversionError("Target reading does not " \
+                    #    "support missing tone information")
+                    tone = 5
 
                 plainSyllable = self._getFromOperator(fromReading)\
                     .convertPlainEntity(plainSyllable, targetOptions)
