@@ -284,6 +284,7 @@ class DictionaryWidget(gtk.Frame):
         """When a character from the recognizer was selected, add it to the
         searchbox"""
         self.entry.set_text(self.entry.get_text() + char)
+        self.search()
         self.recognizer.clear_all()
 
 

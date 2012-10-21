@@ -1,5 +1,14 @@
 == Short term ==
+Toolbar
+
 Vocabulary database
+  * multiple lessons
+  * display/hide columns
+  * dnd sorting, autosorting?
+  * autocomplete info from dictionary
+  * popup menu (delete, move to lesson, show stroke order)
+
+Try pango formatting instead of tags
 Text processor (annotations, etc.)
 Recognition of traditional characters
 Try tomoe recognition engine
