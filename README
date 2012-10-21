@@ -1,0 +1,51 @@
+                                 TAI-PAN
+                    The Mandarin Chinese learning tool
+                    ==================================
+
+Tai-pan is a simple multiplatform GUI application written in Python+GTK aimed 
+to help studying Mandarin. It's should be a nice interface over many existing 
+tools and databases.
+
+                               INSTALLATION
+                               ------------
+FROM DISTRIBUTION PACKAGES:
+COMMING SOON
+
+FROM SOURCE:
+  - Install python and GTK
+  - Checkout the repository: 
+        $ git clone https://github.com/tomas-mazak/taipan.git
+  - Download wagomu recognition engine:
+        http://www.tegaki.org/releases/0.3.1/tegaki-wagomu-0.3.1.tar.gz
+  - unpack and build:
+        $ tar -xzf tegaki-wagomu-0.3.1.tar.gz
+        $ cd tegaki-wagomu-0.3.1
+        $ python setup.py build
+  - copy _wagomu.so to your taipan directory:
+        $ cp build/lib-<your_arch>/_wagomu.so <your-taipan-dir>
+
+
+                                 LICENCE
+                                 -------
+This package is distributed under the terms of the GNU General Public
+License. See the COPYING file for more information.
+
+
+                                 CREDITS
+                                 -------
+CHARACTER RECOGNITION:
+GTK widget used from Tegaki project (http://tegaki.org/)
+    Mathieu Blondel <mathieu ÂT mblondel DÔT org>
+    Ian Johnson <enjalot ÂT gmail DÔT com>
+Wagomu recognition engine used
+    Mathieu Blondel <mathieu ÂT mblondel DÔT org>
+
+CJK CHARACTERS HANDLING:
+cjklib project (http://cjklib.org/) -- CJK library for Python
+
+DATA:
+Stroke order database taken from Zhongwen Development Tool 
+(http://zdt.sourceforge.net/)
+CC-CEDICT (http://cc-cedict.org/) dictionary used
+Unihan database used for cjklib purposes 
+(http://www.unicode.org/charts/unihan.html)
