@@ -2,11 +2,11 @@
 Toolbar
 
 Vocabulary database
-  * multiple lessons
+  * popup menu (delete, move to lesson, show stroke order)
   * display/hide columns
   * dnd sorting, autosorting?
   * autocomplete info from dictionary
-  * popup menu (delete, move to lesson, show stroke order)
+  * toolbar (add, delete, move)
 
 Try pango formatting instead of tags
 Text processor (annotations, etc.)

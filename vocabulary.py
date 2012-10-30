@@ -48,9 +48,16 @@ class VocabularyWidget(gtk.VBox):
         self.tb_les = sqlalchemy.Table('lessons', 
                                        sqlalchemy.MetaData(self.db),
                                        autoload=True)
-        
+        self.tb_vocab = sqlalchemy.Table('vocabulary', 
+                                         sqlalchemy.MetaData(self.db), 
+                                         autoload=True)
+
         # create toolbar
         toolbar = gtk.Toolbar()
+        label = gtk.Label("Lesson: ")
+        toolbar.append_element(gtk.TOOLBAR_CHILD_WIDGET, label, None, None,
+                               None, None, lambda : None, None)
+
         self.lessons = gtk.ListStore(int, str)
         self.cmb_lessons = gtk.ComboBox(self.lessons)
         cell = gtk.CellRendererText()
@@ -61,9 +68,19 @@ class VocabularyWidget(gtk.VBox):
                                "Lesson", None, None, None, lambda : None, None)
         icon = gtk.Image()
         icon.set_from_stock(gtk.STOCK_ADD, 4)
-        toolbar.append_element(gtk.TOOLBAR_CHILD_BUTTON, None, "New", 
+        toolbar.append_element(gtk.TOOLBAR_CHILD_BUTTON, None, None, 
                                "Add a new lesson", None, icon, 
-                               self._on_new_clicked, None)
+                               self._on_add_clicked, None)
+
+        icon = gtk.Image()
+        icon.set_from_stock(gtk.STOCK_DELETE, 4)
+        toolbar.append_element(gtk.TOOLBAR_CHILD_BUTTON, None, None, 
+                               "Delete current lesson", None, icon, 
+                               self._on_delete_clicked, None)
+
+
+        toolbar.append_element(gtk.TOOLBAR_CHILD_SPACE, None, None, None,
+                               None, None, lambda : None, None)
 
         self.pack_start(toolbar, expand=False, fill=False)
 
@@ -77,13 +94,12 @@ class VocabularyWidget(gtk.VBox):
     def _load_lessons(self):
         res = self.tb_les.select().execute()
         self.lessons.clear()
-        i = 1
+        self.lessons.append([-1, "All"])
         for r in res:
-            self.lessons.append([r[0], str(i) + " - " + r[1]])
-            i += 1
-        self.cmb_lessons.set_active(i-2)
+            self.lessons.append([r[0], r[1]])
+        self.cmb_lessons.set_active(0)
 
-    def _on_new_clicked(self, widget):
+    def _on_add_clicked(self, widget):
         dialog = EntryDialog(None, gtk.DIALOG_MODAL,
                 gtk.MESSAGE_INFO, gtk.BUTTONS_OK_CANCEL,
                 "Enter the name of the new lesson")
@@ -93,9 +109,28 @@ class VocabularyWidget(gtk.VBox):
             self.db.execute(self.tb_les.insert().values(name=response))
             self._load_lessons()
 
+    def _on_delete_clicked(self, widget):
+        row = self.cmb_lessons.get_model()[self.cmb_lessons.get_active()]
+        dialog = gtk.MessageDialog(None, gtk.DIALOG_MODAL, gtk.MESSAGE_INFO, 
+                gtk.BUTTONS_YES_NO, 
+                "Are you sure you want to delete the '" + row[1] + "' lesson?"
+                + "\nAll the lesson's vocabulary will be deleted too.")
+        response = dialog.run()
+        dialog.destroy()
+
+        if response == gtk.RESPONSE_YES:
+            q = self.tb_vocab.delete().where(self.tb_vocab.c.lesson == row[0])
+            self.db.execute(q)
+            q = self.tb_les.delete().where(self.tb_les.c.id == row[0])
+            self.db.execute(q)
+            self.lessons.remove(self.cmb_lessons.get_active_iter())
+            self.cmb_lessons.set_active(len(self.lessons)-1)
+
     def _on_lesson_changed(self, widget):
-        lesson_id = widget.get_model()[widget.get_active()][0]
-        self.table.load(lesson_id)
+        it = widget.get_active_iter()
+        if it != None:
+            lesson_id = widget.get_model().get(it, 0)[0]
+            self.table.load(lesson_id)
 
 
 class VocabularyTable(gtk.TreeView):
@@ -113,6 +148,7 @@ class VocabularyTable(gtk.TreeView):
 
         self.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
         self.connect("key_press_event", self._on_key_press)
+        self.connect("button_press_event", self._on_click)
 
         self.col_chars = gtk.TreeViewColumn('Characters')
         self.col_reading = gtk.TreeViewColumn('Pinyin')
@@ -140,17 +176,16 @@ class VocabularyTable(gtk.TreeView):
         self.col_reading.set_attributes(self.cel_reading, text=3)
         self.col_trans.set_attributes(self.cel_trans, text=4)
 
-        self.col_chars.set_sort_column_id(1)
-        self.col_reading.set_sort_column_id(3)
-        self.col_trans.set_sort_column_id(4)
-
     def load(self, lesson):
         self.lesson = lesson
-        res = self.tb_vocab.select(self.tb_vocab.c.lesson == lesson).execute()
+        if lesson == -1:
+            query = self.tb_vocab.select()
+        else:
+            query = self.tb_vocab.select(self.tb_vocab.c.lesson == lesson)
+        res = query.execute()
         self.model.clear()
         for r in res:
             self.model.append(r)
-        self.model.append([-1, '', '', '', '', lesson])
 
     def _on_key_press(self, widget, event):
         if event.keyval == gtk.keysyms.Delete:
@@ -166,6 +201,37 @@ class VocabularyTable(gtk.TreeView):
                 for path in pathlist:
                     self._delete_row(model.get_iter(path))
                 self._delete_commit()
+
+    def _on_click(self, widget, event):
+        if event.button == 3:
+            x = int(event.x)
+            y = int(event.y)
+            time = event.time
+            pthinfo = widget.get_path_at_pos(x, y)
+            if pthinfo is not None:
+                path, col, cellx, celly = pthinfo
+                widget.grab_focus()
+                widget.set_cursor( path, col, 0)
+
+                pmenu = gtk.Menu()
+                item = gtk.MenuItem("New")
+                item.connect("activate", self._on_popup_new_clicked)
+                pmenu.append(item)
+                item = gtk.MenuItem("Delete")
+                pmenu.append(item)
+
+
+                pmenu.show_all()
+                pmenu.popup( None, None, None, event.button, time)
+            return True
+
+    def _on_popup_new_clicked(self, widget): 
+            ins = self.tb_vocab.insert()
+            new = ins.values(simplified='', traditional='', reading='', 
+                             translation='', lesson=self.lesson)
+            res = self.db.execute(new)
+            newid = res.last_inserted_ids()[0]
+            self.model.append([newid, '', '', '', '', self.lesson])
             
     def _on_cell_edited(self, cell, path, new_text, col_id):
         it = self.model.get_iter(path)
@@ -174,33 +240,16 @@ class VocabularyTable(gtk.TreeView):
 
     def _update_row(self, it):
         row = self.model[it]
-        if row[0] == -1:
-            # insert to db
-            ins = self.tb_vocab.insert()
-            new = ins.values(simplified=unicode(row[1]),
-                             traditional=unicode(row[2]), 
-                             reading=unicode(row[3]), 
-                             translation=unicode(row[4]), 
-                             lesson=self.lesson)
-            res = self.db.execute(new)
-            newid = res.last_inserted_ids()[0]
-            self.model[it][0] = newid
-            # add a new empty row
-            self.model.append([-1, '', '', '', '', self.lesson])
-        else:
-            # update db record
-            update = self.tb_vocab.update().where(
-                    self.tb_vocab.c.id==row[0])
-            update_v = update.values(simplified=unicode(row[1]), 
-                                     traditional=unicode(row[2]),
-                                     reading=unicode(row[3]), 
-                                     translation=unicode(row[4]),
-                                     lesson=self.lesson)
-            self.db.execute(update_v)
+        update = self.tb_vocab.update().where(
+                self.tb_vocab.c.id==row[0])
+        update_v = update.values(simplified=unicode(row[1]), 
+                                 traditional=unicode(row[2]),
+                                 reading=unicode(row[3]), 
+                                 translation=unicode(row[4]),
+                                 lesson=self.lesson)
+        self.db.execute(update_v)
     
     def _delete_row(self, it):
-        if self.model[it][0] == -1:
-            return
         i = self.model[it][0]
         self.db.execute(self.tb_vocab.delete().where(self.tb_vocab.c.id == i))
         self.model[it][0] = -2

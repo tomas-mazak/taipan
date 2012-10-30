@@ -7,14 +7,11 @@ import tegakigtk.recognizer
 import cjklib.dictionary
 import cjklib.reading
 import cjklib.characterlookup
+import tagtable
 import sorder
 
 CJKLIB_OPTS = {'databaseUrl': 'sqlite:///data/cjklib.db'}
 GLADE_FILE = "taipan.glade"
-
-class Tag:
-    """Container of formatting tags"""
-    pass
 
 class DictionaryWidget(gtk.Frame):
     """Custom widget encapsulating dictionary functions including handwriting
@@ -69,21 +66,12 @@ class DictionaryWidget(gtk.Frame):
         self.chk_translation = builder.get_object("chk_translation")
         
         # Get result text buffer
+        tag = tagtable.TaipanTagTable()
+        self.rbuf = gtk.TextBuffer(tag)
         result = builder.get_object("txt_result")
-        self.rbuf = result.get_buffer()
+        result.set_buffer(self.rbuf)
         result.connect("button_press_event", self._on_result_click)
         result.connect("populate_popup", self._on_result_popup)
-
-        # Setup result text buffer formatting tags
-        tag = Tag()
-        tag.hword = self.rbuf.create_tag(scale=2.)
-        tag.tone1 = self.rbuf.create_tag(foreground='#ff0000')
-        tag.tone2 = self.rbuf.create_tag(foreground='#ddbb00')
-        tag.tone3 = self.rbuf.create_tag(foreground='#00aa00')
-        tag.tone4 = self.rbuf.create_tag(foreground='#3333ff')
-        tag.tonenull = self.rbuf.create_tag(foreground='#888888')
-        tag.basictrans = self.rbuf.create_tag(scale=1.3)
-        self.tag = tag
 
         # Get expander and add recognizer to it
         self.recognizer = tegakigtk.recognizer.SimpleRecognizerWidget()
@@ -117,18 +105,17 @@ class DictionaryWidget(gtk.Frame):
             res = itertools.chain(res, res2)
 
         # Display the result
-        tag = self.tag
         self.rbuf.set_text('\n')
         num_results = 0
         for r in res:
             num_results += 1
             # Chinese
-            self.rbuf.insert_with_tags(self.rbuf.get_end_iter(),
-                                       r.HeadwordSimplified, tag.hword)
+            self.rbuf.insert_with_tags_by_name(self.rbuf.get_end_iter(),
+                                       r.HeadwordSimplified, "headword")
             if r.HeadwordSimplified != r.HeadwordTraditional:
                 s = " (" + r.HeadwordTraditional + ")"
-                self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), 
-                                           s, tag.hword)
+                self.rbuf.insert_with_tags_by_name(self.rbuf.get_end_iter(), 
+                                           s, "headword")
             
             # Reading
             self.rbuf.insert(self.rbuf.get_end_iter(), "\n[ ")
@@ -146,7 +133,7 @@ class DictionaryWidget(gtk.Frame):
                 m = "  (" + str(i) + ") " + s[i] + "\n"
                 extended += m
 
-            self._add_text_with_readings(basictrans, [tag.basictrans])
+            self._add_text_with_readings(basictrans, ["basictrans"])
             self._add_text_with_readings(extended)
             self.rbuf.insert(self.rbuf.get_end_iter(), "\n\n")
 
@@ -158,7 +145,6 @@ class DictionaryWidget(gtk.Frame):
 
     def _add_text_with_readings(self, text, tags=[]):
         """Find readings in the text and format them properly"""
-        tag = self.tag
         # add reading blocks and plaintext before them
         last = 0
         for match in re.finditer('\[(.*)\]', text):
@@ -168,41 +154,40 @@ class DictionaryWidget(gtk.Frame):
                         self.dict.READING, 
                         sourceOptions=self.dict.READING_OPTIONS)
 
-            self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), text[last:s],
-                                       *tags)
+            self.rbuf.insert_with_tags_by_name(self.rbuf.get_end_iter(), 
+                                               text[last:s], *tags)
             self._add_formatted_reading(rd, tags)
             last = e
 
         # append final part
-        self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), text[last:], 
-                                   *tags)
+        self.rbuf.insert_with_tags_by_name(self.rbuf.get_end_iter(), 
+                                           text[last:], *tags)
 
     def _add_formatted_reading(self, reading, tags=[]):
         """Split reading string to syllables and add them with proper
            style according to tone"""
-        tag = self.tag
         decomp = self.reading.decompose(reading, 'Pinyin')
         for ent in decomp:
             if self.reading.isReadingEntity(ent, 'Pinyin'):
                 foo,tone = self.reading.splitEntityTone(ent, 'Pinyin')
                 if tone == 1:
-                    self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), 
-                                               ent, tag.tone1, *tags)
+                    self.rbuf.insert_with_tags_by_name(
+                            self.rbuf.get_end_iter(), ent, "tone1", *tags)
                 elif tone == 2:
-                    self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), 
-                                               ent, tag.tone2, *tags)
+                    self.rbuf.insert_with_tags_by_name(
+                            self.rbuf.get_end_iter(), ent, "tone2", *tags)
                 elif tone == 3:
-                    self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), 
-                                               ent, tag.tone3, *tags)
+                    self.rbuf.insert_with_tags_by_name(
+                            self.rbuf.get_end_iter(), ent, "tone3", *tags)
                 elif tone == 4:
-                    self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), 
-                                               ent, tag.tone4, *tags)
+                    self.rbuf.insert_with_tags_by_name(
+                            self.rbuf.get_end_iter(), ent, "tone4", *tags)
                 else:
-                    self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), 
-                                               ent, tag.tonenull, *tags)
+                    self.rbuf.insert_with_tags_by_name(
+                            self.rbuf.get_end_iter(), ent, "tonenull", *tags)
             else:
-                self.rbuf.insert_with_tags(self.rbuf.get_end_iter(), ent,
-                                           *tags)
+                self.rbuf.insert_with_tags_by_name(
+                        self.rbuf.get_end_iter(), ent, *tags)
 
     def _on_entry_keypress(self, widget, event):
         """Do dictionary search when RETURN was pressed inside the search box

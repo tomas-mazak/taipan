@@ -5,6 +5,7 @@ import sqlalchemy
 import dictionary
 import sorder
 import vocabulary
+import texteditor
 
 VOCABULARY_DB = "sqlite:///data/vocabulary.db"
 GLADE_FILE = "taipan.glade"
@@ -40,11 +41,8 @@ class Taipan:
 
         # Get notebook and insert demopage
         label = gtk.Label("TextView")
-        tv = gtk.TextView()
-        tv.set_left_margin(5)
-        tv.set_right_margin(5)
-        self.ntb.append_page(tv, label)
-        tv.get_buffer().set_text('请问，中山大学在哪里？')
+        editor = texteditor.TexteditorWidget()
+        self.ntb.append_page(editor, label)
 
     def start(self):
         self.window.show_all()
@@ -60,3 +58,4 @@ class Taipan:
 if __name__ == "__main__":
     tp = Taipan()
     tp.start()
+
