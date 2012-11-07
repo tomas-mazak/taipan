@@ -15,14 +15,11 @@ FROM SOURCE:
   - Install python and GTK
   - Checkout the repository: 
         $ git clone https://github.com/tomas-mazak/taipan.git
-  - Download wagomu recognition engine:
-        http://www.tegaki.org/releases/0.3.1/tegaki-wagomu-0.3.1.tar.gz
-  - unpack and build:
-        $ tar -xzf tegaki-wagomu-0.3.1.tar.gz
-        $ cd tegaki-wagomu-0.3.1
+  - run setup (you need python distutils to install):
+        $ cd taipan/
         $ python setup.py build
-  - copy _wagomu.so to your taipan directory:
-        $ cp build/lib-<your_arch>/_wagomu.so <your-taipan-dir>
+        $ sudo python setup.py install
+  (command 'taipan' will be installed to $PATH)
 
 
                                  LICENCE
