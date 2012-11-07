@@ -1,17 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+import os
 import re
 import itertools
 import gtk
 import tegakigtk.recognizer
 import cjklib.dictionary
+import cjklib.dictionary.search
 import cjklib.reading
 import cjklib.characterlookup
 import tagtable
 import sorder
 
-CJKLIB_OPTS = {'databaseUrl': 'sqlite:///data/cjklib.db'}
-GLADE_FILE = "taipan.glade"
+MODULE_DIR = os.path.dirname(os.path.abspath( __file__ ))
+CJKLIB_OPTS = {'databaseUrl': 'sqlite:///' +
+               os.path.join(MODULE_DIR, 'cjklib.db')}
+GLADE_FILE = os.path.join(MODULE_DIR, "taipan.glade")
 
 class DictionaryWidget(gtk.Frame):
     """Custom widget encapsulating dictionary functions including handwriting
@@ -273,8 +277,8 @@ class DictionaryWidget(gtk.Frame):
         self.recognizer.clear_all()
 
 
-# If directly called, start the GUI
-if __name__ == "__main__":
+def run():
+    """Initialize the GUI"""
     window = gtk.Window()
     dictionary = DictionaryWidget()
     
@@ -288,3 +292,8 @@ if __name__ == "__main__":
     gtk.gdk.threads_enter() 
     gtk.main()
     gtk.gdk.threads_leave()
+
+
+# If directly called, start the GUI
+if __name__ == "__main__":
+    run()

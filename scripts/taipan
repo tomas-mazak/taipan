@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+
+# update path
+import os
+import sys
+import taipan
+sys.path[0] = os.path.dirname(taipan.__file__)
+
+# launch dictionary
+from taipan.dictionary import run
+run()
