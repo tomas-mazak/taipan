@@ -1,2 +1,5 @@
 *.pyc
 *.so
+build
+wagomu.py
+wagomu_wrap.cpp
